@@ -1,6 +1,7 @@
 package cidranger
 
 import (
+	"errors"
 	"fmt"
 	"net/netip"
 	"strings"
@@ -125,6 +126,13 @@ func (p *prefixTrie) CoveredNetworks(network netip.Prefix) ([]RangerEntry, error
 	return p.coveredNetworks(net)
 }
 
+// Covering returns the list of RangerEntry(s) the given ipnet
+// is covered by. It's like ContainingNetworks() for ipnet.
+func (p *prefixTrie) CoveringNetworks(network netip.Prefix) ([]RangerEntry, error) {
+	net := rnet.NewNetwork(network)
+	return p.coveringNetworks(net)
+}
+
 // Len returns number of networks in ranger.
 func (p *prefixTrie) Len() int {
 	return p.size
@@ -144,6 +152,55 @@ func (p *prefixTrie) String() string {
 	}
 	return fmt.Sprintf("%s (target_pos:%d:has_entry:%t)%s", p.network,
 		p.targetBitPosition(), p.hasEntry(), strings.Join(children, ""))
+}
+
+// Returns adjacent entries to givent entry, identified by given network. Returns nil if adjacent entry not exists.
+// Adjacent networks are networks with only different lower bit in network address, e.g. 192.168.0.0/24 and 192.168.1.0/24
+// That networks can be mergeg, e.g 192.168.0.0/24 + 192.168.1.0/24 = 192.168.0.0/23
+func (p *prefixTrie) Adjacent(network netip.Prefix) (entry RangerEntry, err error) {
+	addr := network.Masked().Addr()
+	adjacentNumber := rnet.NewNetworkNumber(addr)
+	ones := network.Bits()
+	var size int
+	if addr.Is4() {
+		size = 32
+	} else if addr.Is6() {
+		size = 128
+	} else {
+		return nil, errors.New("invalid subnet")
+	}
+
+	if ones == 0 {
+		// It's a full network, e.g. 0.0.0.0/0, there is no adjacents
+		return nil, nil
+	}
+	position := size - ones
+	if err := adjacentNumber.FlipNthBit(uint(position)); err != nil {
+		return nil, err
+	}
+	adjacentNet := rnet.NewNetwork(netip.PrefixFrom(adjacentNumber.ToIP(), ones))
+	if entry, err = p.adjacent(adjacentNet); err != nil {
+		return nil, err
+	}
+	return entry, err
+}
+
+func (p *prefixTrie) adjacent(network rnet.Network) (RangerEntry, error) {
+	if p.hasEntry() && p.network.Equal(network) {
+		return p.entry, nil
+	}
+	if p.targetBitPosition() < 0 {
+		return nil, nil
+	}
+	bit, err := p.targetBitFromIP(network.Number)
+	if err != nil {
+		return nil, err
+	}
+	child := p.children[bit]
+	if child != nil {
+		return child.adjacent(network)
+	}
+	return nil, nil
 }
 
 func (p *prefixTrie) contains(number rnet.NetworkNumber) (bool, error) {
@@ -213,6 +270,38 @@ func (p *prefixTrie) coveredNetworks(network rnet.Network) ([]RangerEntry, error
 		child := p.children[bit]
 		if child != nil {
 			return child.coveredNetworks(network)
+		}
+	}
+	return results, nil
+}
+
+func (p *prefixTrie) coveringNetworks(network rnet.Network) ([]RangerEntry, error) {
+	var results []RangerEntry
+	if !p.network.Covers(network) {
+		return results, nil
+	}
+	if p.hasEntry() {
+		results = []RangerEntry{p.entry}
+	}
+	if p.targetBitPosition() < 0 {
+		return results, nil
+	}
+	bit, err := p.targetBitFromIP(network.Number)
+	if err != nil {
+		return nil, err
+	}
+	child := p.children[bit]
+	if child != nil {
+		ranges, err := child.coveringNetworks(network)
+		if err != nil {
+			return nil, err
+		}
+		if len(ranges) > 0 {
+			if len(results) > 0 {
+				results = append(results, ranges...)
+			} else {
+				results = ranges
+			}
 		}
 	}
 	return results, nil

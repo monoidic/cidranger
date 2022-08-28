@@ -137,6 +137,20 @@ func (n NetworkNumber) Bit(position uint) (uint32, error) {
 	return (n[idx] >> rShift) & 1, nil
 }
 
+// FlipNthBit reverses the bit value at position. Position numbering is LSB 0.
+func (n *NetworkNumber) FlipNthBit(position uint) error {
+	if int(position) > len(*n)*BitsPerUint32-1 {
+		return ErrInvalidBitPosition
+	}
+	idx := len(*n) - 1 - int(position/BitsPerUint32)
+	bitUintPosition := position % 32
+	XORMask := 1 << bitUintPosition
+	//byteNum := net.IPv6len - (position / 8) - 1
+	//	getByteIndexOfBit(bitNum)
+	(*n)[idx] ^= uint32(XORMask)
+	return nil
+}
+
 // LeastCommonBitPosition returns the smallest position of the preceding common
 // bits of the 2 network numbers, and returns an error ErrNoGreatestCommonBit
 // if the two network number diverges from the first bit.
@@ -219,7 +233,7 @@ func (n Network) Contains(nn NetworkNumber) bool {
 	return true
 }
 
-// Contains returns true if Network covers o, false otherwise
+// Covers returns true if Network covers o, false otherwise
 func (n Network) Covers(o Network) bool {
 	if len(n.Number) != len(o.Number) {
 		return false

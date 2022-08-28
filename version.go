@@ -61,9 +61,26 @@ func (v *versionedRanger) CoveredNetworks(network netip.Prefix) ([]RangerEntry, 
 	return ranger.CoveredNetworks(network)
 }
 
+func (v *versionedRanger) CoveringNetworks(network netip.Prefix) ([]RangerEntry, error) {
+	ranger, err := v.getRangerForIP(network.Addr())
+	if err != nil {
+		return nil, err
+	}
+	return ranger.CoveringNetworks(network)
+}
+
 // Len returns number of networks in ranger.
 func (v *versionedRanger) Len() int {
 	return v.ipV4Ranger.Len() + v.ipV6Ranger.Len()
+}
+
+// Len returns number of networks in ranger.
+func (v *versionedRanger) Adjacent(network netip.Prefix) (RangerEntry, error) {
+	ranger, err := v.getRangerForIP(network.Addr())
+	if err != nil {
+		return nil, err
+	}
+	return ranger.Adjacent(network)
 }
 
 func (v *versionedRanger) getRangerForIP(ip netip.Addr) (Ranger, error) {

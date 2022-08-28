@@ -155,3 +155,31 @@ func TestCoveredNetworks(t *testing.T) {
 		})
 	}
 }
+
+func TestCoveringNetworks(t *testing.T) {
+	for _, tc := range coveringNetworkTests {
+		t.Run(tc.name, func(t *testing.T) {
+			ranger := newBruteRanger()
+			for _, insert := range tc.inserts {
+				network := netip.MustParsePrefix(insert)
+				err := ranger.Insert(NewBasicRangerEntry(network))
+				assert.NoError(t, err)
+			}
+			var expectedEntries []string
+			expectedEntries = append(expectedEntries, tc.networks...)
+			sort.Strings(expectedEntries)
+			snet := netip.MustParsePrefix(tc.search)
+			networks, err := ranger.CoveringNetworks(snet)
+			assert.NoError(t, err)
+
+			var results []string
+			for _, result := range networks {
+				net := result.Network()
+				results = append(results, net.String())
+			}
+			sort.Strings(results)
+
+			assert.Equal(t, expectedEntries, results)
+		})
+	}
+}

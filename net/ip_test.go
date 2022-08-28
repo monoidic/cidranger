@@ -1,6 +1,7 @@
 package net
 
 import (
+	"errors"
 	"math"
 	"net/netip"
 	"testing"
@@ -68,6 +69,52 @@ func TestNetworkNumberBit(t *testing.T) {
 				} else {
 					assert.Equal(t, uint32(0), bit)
 				}
+			}
+		})
+	}
+}
+
+func TestNetworkNumber_FlipNthBit(t *testing.T) {
+	cases := []struct {
+		initial     NetworkNumber
+		position    uint
+		expected    NetworkNumber
+		name        string
+		expectedErr error
+	}{
+		{
+			NewNetworkNumber(netip.MustParseAddr("192.168.0.0")),
+			8,
+			// 192.168.1.0
+			NetworkNumber{0xc0_a8_01_00},
+			"Flip bit 8",
+			nil,
+		},
+		{
+			NewNetworkNumber(netip.MustParseAddr("128.0.0.1")),
+			31,
+			// 0.0.0.1
+			NetworkNumber{0x00_00_00_01},
+			"Flip bit 31",
+			nil,
+		},
+		{
+			NewNetworkNumber(netip.MustParseAddr("128.0.0.1")),
+			32,
+			// 0.0.0.1
+			NetworkNumber{0x00_00_00_01},
+			"error in position",
+			errors.New("bit position not valid"),
+		},
+	}
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			actual := tc.initial
+			err := actual.FlipNthBit(tc.position)
+			assert.Equal(t, tc.expectedErr, err)
+			if err == nil {
+				assert.Equal(t, tc.expected, actual)
+
 			}
 		})
 	}
