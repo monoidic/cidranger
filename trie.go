@@ -5,7 +5,7 @@ import (
 	"net/netip"
 	"strings"
 
-	rnet "github.com/yl2chen/cidranger/net"
+	rnet "github.com/monoidic/cidranger/net"
 )
 
 // prefixTrie is a path-compressed (PC) trie implementation of the

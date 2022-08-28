@@ -12,7 +12,7 @@ import (
 	"net/netip"
 	"os"
 
-	"github.com/yl2chen/cidranger"
+	"github.com/monoidic/cidranger"
 )
 
 // custom structure that conforms to RangerEntry interface

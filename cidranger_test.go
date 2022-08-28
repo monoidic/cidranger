@@ -9,7 +9,7 @@ import (
 	"time"
 
 	"github.com/stretchr/testify/assert"
-	rnet "github.com/yl2chen/cidranger/net"
+	rnet "github.com/monoidic/cidranger/net"
 )
 
 /*

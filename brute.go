@@ -3,7 +3,7 @@ package cidranger
 import (
 	"net/netip"
 
-	rnet "github.com/yl2chen/cidranger/net"
+	rnet "github.com/monoidic/cidranger/net"
 )
 
 // bruteRanger is a brute force implementation of Ranger.  Insertion and

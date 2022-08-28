@@ -3,7 +3,7 @@ package cidranger
 import (
 	"net/netip"
 
-	rnet "github.com/yl2chen/cidranger/net"
+	rnet "github.com/monoidic/cidranger/net"
 )
 
 type rangerFactory func(rnet.IPVersion) Ranger
