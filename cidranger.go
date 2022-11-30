@@ -42,6 +42,8 @@ package cidranger
 import (
 	"fmt"
 	"net/netip"
+
+	rnet "github.com/yl2chen/cidranger/net"
 )
 
 // ErrInvalidNetworkInput is returned upon invalid network input.
@@ -61,39 +63,28 @@ func parseCIDRUnsafe(s string) netip.Prefix {
 	return cidr
 }
 
-// RangerEntry is an interface for insertable entry into a Ranger.
-type RangerEntry interface {
-	Network() netip.Prefix
+// Entry is an insertable entry into a Ranger.
+type Entry[T any] struct {
+	Network netip.Prefix
+	Value   T
 }
 
-type basicRangerEntry struct {
-	ipNet netip.Prefix
-}
-
-func (b *basicRangerEntry) Network() netip.Prefix {
-	return b.ipNet
-}
-
-// NewBasicRangerEntry returns a basic RangerEntry that only stores the network
-// itself.
-func NewBasicRangerEntry(ipNet netip.Prefix) RangerEntry {
-	return &basicRangerEntry{
-		ipNet: ipNet, //.Masked(),
-	}
-}
-
-// Ranger is an interface for cidr block containment lookups.
-type Ranger interface {
-	Insert(entry RangerEntry) error
-	Remove(network netip.Prefix) (RangerEntry, error)
-	Contains(ip netip.Addr) (bool, error)
-	ContainingNetworks(ip netip.Addr) ([]RangerEntry, error)
-	CoveredNetworks(network netip.Prefix) ([]RangerEntry, error)
+// iface is an interface for cidr block containment lookups.
+type iface[T any] interface {
+	Insert(netip.Prefix, T) error
+	Remove(netip.Prefix) (T, bool, error)
+	Contains(netip.Addr) (bool, error)
+	ContainingNetworks(netip.Addr) ([]T, error)
+	CoveredNetworks(netip.Prefix) ([]T, error)
 	Len() int
 }
 
-// NewPCTrieRanger returns a versionedRanger that supports both IPv4 and IPv6
+// New returns a versionedRanger that supports both IPv4 and IPv6
 // using the path compressed trie implemention.
-func NewPCTrieRanger() Ranger {
-	return newVersionedRanger(newPrefixTree)
+func New[T any]() iface[T] {
+	fn := func(version rnet.IPVersion) iface[T] {
+		return newPrefixTree[T](version)
+	}
+
+	return newVersionedRanger(fn)
 }

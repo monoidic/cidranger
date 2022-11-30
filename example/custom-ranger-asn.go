@@ -37,7 +37,7 @@ func (b *customRangerEntry) Asn() string {
 }
 
 // create customRangerEntry object using net and asn
-func newCustomRangerEntry(ipNet netip.Prefix, asn string) cidranger.RangerEntry {
+func newCustomRangerEntry(ipNet netip.Prefix, asn string) cidranger.Entry {
 	return &customRangerEntry{
 		ipNet: ipNet,
 		asn:   asn,
@@ -48,7 +48,7 @@ func newCustomRangerEntry(ipNet netip.Prefix, asn string) cidranger.RangerEntry 
 func main() {
 
 	// instantiate NewPCTrieRanger
-	ranger := cidranger.NewPCTrieRanger()
+	ranger := cidranger.New()
 
 	// Load sample data using our custom function
 	network := netip.MustParsePrefix("192.168.1.0/24")
