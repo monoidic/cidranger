@@ -16,104 +16,98 @@ import (
 // testing because the correctness of this implementation can be easily guaranteed,
 // and used as the ground truth when running a wider range of 'random' tests on
 // other more sophisticated implementations.
-type bruteRanger struct {
-	ipV4Entries map[netip.Prefix]RangerEntry
-	ipV6Entries map[netip.Prefix]RangerEntry
+type bruteRanger[T any] struct {
+	ipV4Entries map[netip.Prefix]T
+	ipV6Entries map[netip.Prefix]T
 }
 
 // newBruteRanger returns a new Ranger.
-func newBruteRanger() Ranger {
-	return &bruteRanger{
-		ipV4Entries: make(map[netip.Prefix]RangerEntry),
-		ipV6Entries: make(map[netip.Prefix]RangerEntry),
+func newBruteRanger[T any]() iface[T] {
+	return &bruteRanger[T]{
+		ipV4Entries: make(map[netip.Prefix]T),
+		ipV6Entries: make(map[netip.Prefix]T),
 	}
 }
 
 // Insert inserts a RangerEntry into ranger.
-func (b *bruteRanger) Insert(entry RangerEntry) error {
-	network := entry.Network()
-	key := network
-	if _, found := b.ipV4Entries[key]; !found {
-		entries, err := b.getEntriesByVersion(entry.Network().Addr())
+func (b *bruteRanger[T]) Insert(prefix netip.Prefix, value T) error {
+	if _, found := b.ipV4Entries[prefix]; !found {
+		entries, err := b.getEntriesByVersion(prefix.Addr())
 		if err != nil {
 			return err
 		}
-		entries[key] = entry
+		entries[prefix] = value
 	}
 	return nil
 }
 
-// Remove removes a RangerEntry identified by given network from ranger.
-func (b *bruteRanger) Remove(network netip.Prefix) (RangerEntry, error) {
-	networks, err := b.getEntriesByVersion(network.Addr())
+// Remove removes a value identified by given network from ranger.
+func (b *bruteRanger[T]) Remove(prefix netip.Prefix) (T, bool, error) {
+	networks, err := b.getEntriesByVersion(prefix.Addr())
 	if err != nil {
-		return nil, err
+		var zero T
+		return zero, false, err
 	}
-	key := network
-	if networkToDelete, found := networks[key]; found {
-		delete(networks, key)
-		return networkToDelete, nil
-	}
-	return nil, nil
+	value, found := networks[prefix]
+	delete(networks, prefix)
+	return value, found, nil
 }
 
 // Contains returns bool indicating whether given ip is contained by any
 // network in ranger.
-func (b *bruteRanger) Contains(ip netip.Addr) (bool, error) {
+func (b *bruteRanger[T]) Contains(ip netip.Addr) (bool, error) {
 	entries, err := b.getEntriesByVersion(ip)
 	if err != nil {
 		return false, err
 	}
-	for _, entry := range entries {
-		network := entry.Network()
-		if network.Contains(ip) {
+	for prefix := range entries {
+		if prefix.Contains(ip) {
 			return true, nil
 		}
 	}
 	return false, nil
 }
 
-// ContainingNetworks returns all RangerEntry(s) that given ip contained in.
-func (b *bruteRanger) ContainingNetworks(ip netip.Addr) ([]RangerEntry, error) {
+// ContainingNetworks returns all values that given ip is contained in.
+func (b *bruteRanger[T]) ContainingNetworks(ip netip.Addr) ([]T, error) {
 	entries, err := b.getEntriesByVersion(ip)
 	if err != nil {
 		return nil, err
 	}
-	results := []RangerEntry{}
-	for _, entry := range entries {
-		network := entry.Network()
-		if network.Contains(ip) {
-			results = append(results, entry)
+	var values []T
+	for prefix, value := range entries {
+		if prefix.Contains(ip) {
+			values = append(values, value)
 		}
 	}
-	return results, nil
+	return values, nil
 }
 
-// CoveredNetworks returns the list of RangerEntry(s) the given ipnet
+// CoveredNetworks returns the list of values the given ipnet
 // covers.  That is, the networks that are completely subsumed by the
 // specified network.
-func (b *bruteRanger) CoveredNetworks(network netip.Prefix) ([]RangerEntry, error) {
-	entries, err := b.getEntriesByVersion(network.Addr())
+func (b *bruteRanger[T]) CoveredNetworks(prefix netip.Prefix) ([]T, error) {
+	entries, err := b.getEntriesByVersion(prefix.Addr())
 	if err != nil {
 		return nil, err
 	}
-	var results []RangerEntry
-	testNetwork := rnet.NewNetwork(network)
-	for _, entry := range entries {
-		entryNetwork := rnet.NewNetwork(entry.Network())
+	var values []T
+	testNetwork := rnet.NewNetwork(prefix)
+	for entryPrefix, value := range entries {
+		entryNetwork := rnet.NewNetwork(entryPrefix)
 		if testNetwork.Covers(entryNetwork) {
-			results = append(results, entry)
+			values = append(values, value)
 		}
 	}
-	return results, nil
+	return values, nil
 }
 
 // Len returns number of networks in ranger.
-func (b *bruteRanger) Len() int {
+func (b *bruteRanger[T]) Len() int {
 	return len(b.ipV4Entries) + len(b.ipV6Entries)
 }
 
-func (b *bruteRanger) getEntriesByVersion(ip netip.Addr) (map[netip.Prefix]RangerEntry, error) {
+func (b *bruteRanger[T]) getEntriesByVersion(ip netip.Addr) (map[netip.Prefix]T, error) {
 	if ip.Is4() {
 		return b.ipV4Entries, nil
 	}
