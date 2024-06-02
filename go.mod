@@ -1,11 +1,8 @@
-module github.com/yl2chen/cidranger/v2
+module github.com/monoidic/cidranger/v2
 
 go 1.22.3
 
-replace github.com/monoidic/cidranger/v2 => .
-
 require (
-	github.com/monoidic/cidranger/v2 v2.0.0
 	github.com/sirupsen/logrus v1.9.0
 	github.com/stretchr/testify v1.7.0
 )
