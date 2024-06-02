@@ -53,7 +53,7 @@ func NewNetworkNumber(ip netip.Addr) NetworkNumber {
 
 	nn := make(NetworkNumber, parts)
 	sl := ip.AsSlice()
-	for i := 0; i < parts; i++ {
+	for i := range parts {
 		nn[i] = binary.BigEndian.Uint32(sl[i*4 : (i+1)*4])
 	}
 	return nn
@@ -127,14 +127,14 @@ func (n NetworkNumber) Previous() NetworkNumber {
 
 // Bit returns uint32 representing the bit value at given position, e.g.,
 // "128.0.0.0" has bit value of 1 at position 31, and 0 for positions 30 to 0.
-func (n NetworkNumber) Bit(position uint) (uint32, error) {
+func (n NetworkNumber) Bit(position uint) (byte, error) {
 	if int(position) > len(n)*BitsPerUint32-1 {
 		return 0, ErrInvalidBitPosition
 	}
 	idx := len(n) - 1 - int(position/BitsPerUint32)
 	// Mod 31 to get array index.
 	rShift := position & (BitsPerUint32 - 1)
-	return (n[idx] >> rShift) & 1, nil
+	return byte(n[idx]>>rShift) & 1, nil
 }
 
 // FlipNthBit reverses the bit value at position. Position numbering is LSB 0.
@@ -156,19 +156,18 @@ func (n *NetworkNumber) FlipNthBit(position uint) error {
 // if the two network number diverges from the first bit.
 // e.g., if the network number diverges after the 1st bit, it returns 131 for
 // IPv6 and 31 for IPv4 .
-func (n NetworkNumber) LeastCommonBitPosition(n1 NetworkNumber) (uint, error) {
+func (n NetworkNumber) LeastCommonBitPosition(n1 NetworkNumber) (int, error) {
 	if len(n) != len(n1) {
 		return 0, ErrVersionMismatch
 	}
 	for i := 0; i < len(n); i++ {
-		mask := uint32(1) << 31
-		pos := uint(31)
-		for ; mask > 0; mask >>= 1 {
+		pos := 31
+		for mask := uint32(1 << 31); mask > 0; mask >>= 1 {
 			if n[i]&mask != n1[i]&mask {
 				if i == 0 && pos == 31 {
 					return 0, ErrNoGreatestCommonBit
 				}
-				return (pos + 1) + uint(BitsPerUint32)*uint(len(n)-i-1), nil
+				return pos + 1 + BitsPerUint32*(len(n)-i-1), nil
 			}
 			pos--
 		}
@@ -246,7 +245,7 @@ func (n Network) Covers(o Network) bool {
 // LeastCommonBitPosition returns the smallest position of the preceding common
 // bits of the 2 networks, and returns an error ErrNoGreatestCommonBit
 // if the two network number diverges from the first bit.
-func (n Network) LeastCommonBitPosition(n1 Network) (max uint, err error) {
+func (n Network) LeastCommonBitPosition(n1 Network) (max int, err error) {
 	maskSize := n.IPNet.Bits()
 	if maskSize1 := n1.IPNet.Bits(); maskSize1 < maskSize {
 		maskSize = maskSize1
@@ -255,7 +254,7 @@ func (n Network) LeastCommonBitPosition(n1 Network) (max uint, err error) {
 	if max, err = n.Number.LeastCommonBitPosition(n1.Number); err != nil {
 		return 0, err
 	}
-	if maskPosition := uint(len(n1.Number)*BitsPerUint32 - maskSize); maskPosition > max {
+	if maskPosition := len(n1.Number)*BitsPerUint32 - maskSize; maskPosition > max {
 		max = maskPosition
 	}
 

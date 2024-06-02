@@ -65,9 +65,9 @@ func TestNetworkNumberBit(t *testing.T) {
 				bit, err := tc.ip.Bit(i)
 				assert.NoError(t, err)
 				if _, isOne := tc.ones[i]; isOne {
-					assert.Equal(t, uint32(1), bit)
+					assert.Equal(t, byte(1), bit)
 				} else {
-					assert.Equal(t, uint32(0), bit)
+					assert.Equal(t, byte(0), bit)
 				}
 			}
 		})
@@ -212,7 +212,7 @@ func TestLeastCommonBitPositionForNetworks(t *testing.T) {
 	cases := []struct {
 		ip1      NetworkNumber
 		ip2      NetworkNumber
-		position uint
+		position int
 		err      error
 		name     string
 	}{
@@ -389,17 +389,17 @@ func TestNetworkLeastCommonBitPosition(t *testing.T) {
 	cases := []struct {
 		cidr1       string
 		cidr2       string
-		expectedPos uint
+		expectedPos int
 		expectedErr error
 		name        string
 	}{
-		{"0.0.1.0/24", "0.0.0.0/24", uint(9), nil, "IPv4 diverge before mask pos"},
-		{"0.0.0.0/24", "0.0.0.0/24", uint(8), nil, "IPv4 diverge after mask pos"},
-		{"0.0.0.128/24", "0.0.0.0/16", uint(16), nil, "IPv4 different mask pos"},
+		{"0.0.1.0/24", "0.0.0.0/24", 9, nil, "IPv4 diverge before mask pos"},
+		{"0.0.0.0/24", "0.0.0.0/24", 8, nil, "IPv4 diverge after mask pos"},
+		{"0.0.0.128/24", "0.0.0.0/16", 16, nil, "IPv4 different mask pos"},
 		{"128.0.0.0/24", "0.0.0.0/24", 0, ErrNoGreatestCommonBit, "IPv4 diverge at 1st pos"},
-		{"8000::/96", "8000::1:0:0/96", uint(33), nil, "IPv6 diverge before mask pos"},
-		{"8000::/96", "8000::8:0/96", uint(32), nil, "IPv6 diverge after mask pos"},
-		{"8000::/96", "8000::/95", uint(33), nil, "IPv6 different mask pos"},
+		{"8000::/96", "8000::1:0:0/96", 33, nil, "IPv6 diverge before mask pos"},
+		{"8000::/96", "8000::8:0/96", 32, nil, "IPv6 diverge after mask pos"},
+		{"8000::/96", "8000::/95", 33, nil, "IPv6 different mask pos"},
 		{"ffff::0/24", "0::1/24", 0, ErrNoGreatestCommonBit, "IPv6 diverge at 1st pos"},
 	}
 	for _, c := range cases {

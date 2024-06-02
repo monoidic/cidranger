@@ -9,54 +9,49 @@ import (
 )
 
 func TestInsert(t *testing.T) {
-	ranger := newBruteRanger().(*bruteRanger)
+	ranger := newBruteRanger[int]().(*bruteRanger[int])
 	networkIPv4 := netip.MustParsePrefix("0.0.1.0/24")
 	networkIPv6 := netip.MustParsePrefix("8000::/96")
-	entryIPv4 := NewBasicRangerEntry(networkIPv4)
-	entryIPv6 := NewBasicRangerEntry(networkIPv6)
 
-	ranger.Insert(entryIPv4)
-	ranger.Insert(entryIPv6)
+	ranger.Insert(networkIPv4, 12)
+	ranger.Insert(networkIPv6, 34)
 
 	assert.Equal(t, 1, len(ranger.ipV4Entries))
-	assert.Equal(t, entryIPv4, ranger.ipV4Entries[networkIPv4])
+	assert.Equal(t, 12, ranger.ipV4Entries[networkIPv4])
 	assert.Equal(t, 1, len(ranger.ipV6Entries))
-	assert.Equal(t, entryIPv6, ranger.ipV6Entries[networkIPv6])
+	assert.Equal(t, 34, ranger.ipV6Entries[networkIPv6])
 }
 
 func TestRemove(t *testing.T) {
-	ranger := newBruteRanger().(*bruteRanger)
+	ranger := newBruteRanger[int]().(*bruteRanger[int])
 	networkIPv4 := netip.MustParsePrefix("0.0.1.0/24")
 	networkIPv6 := netip.MustParsePrefix("8000::/96")
 	notInserted := netip.MustParsePrefix("8000::/96")
 
-	insertIPv4 := NewBasicRangerEntry(networkIPv4)
-	insertIPv6 := NewBasicRangerEntry(networkIPv6)
-
-	ranger.Insert(insertIPv4)
-	deletedIPv4, err := ranger.Remove(networkIPv4)
+	ranger.Insert(networkIPv4, 12)
+	deletedIPv4, _, err := ranger.Remove(networkIPv4)
 	assert.NoError(t, err)
 
-	ranger.Insert(insertIPv6)
-	deletedIPv6, err := ranger.Remove(networkIPv6)
+	ranger.Insert(networkIPv6, 34)
+	deletedIPv6, _, err := ranger.Remove(networkIPv6)
 	assert.NoError(t, err)
 
-	entry, err := ranger.Remove(notInserted)
+	entry, _, err := ranger.Remove(notInserted)
 	assert.NoError(t, err)
-	assert.Nil(t, entry)
+	assert.Equal(t, 0, entry)
 
-	assert.Equal(t, insertIPv4, deletedIPv4)
+	assert.Equal(t, 12, deletedIPv4)
 	assert.Equal(t, 0, len(ranger.ipV4Entries))
-	assert.Equal(t, insertIPv6, deletedIPv6)
+	assert.Equal(t, 34, deletedIPv6)
 	assert.Equal(t, 0, len(ranger.ipV6Entries))
 }
 
 func TestContains(t *testing.T) {
-	r := newBruteRanger().(*bruteRanger)
-	network := netip.MustParsePrefix("0.0.1.0/24")
-	network1 := netip.MustParsePrefix("8000::/112")
-	r.Insert(NewBasicRangerEntry(network))
-	r.Insert(NewBasicRangerEntry(network1))
+	r := newBruteRanger[empty]().(*bruteRanger[empty])
+	network1 := netip.MustParsePrefix("0.0.1.0/24")
+	network2 := netip.MustParsePrefix("8000::/112")
+	r.Insert(network1, emptyV)
+	r.Insert(network2, emptyV)
 
 	cases := []struct {
 		ip       netip.Addr
@@ -84,31 +79,31 @@ func TestContains(t *testing.T) {
 }
 
 func TestContainingNetworks(t *testing.T) {
-	r := newBruteRanger().(*bruteRanger)
+	r := newBruteRanger[empty]().(*bruteRanger[empty])
 	network1 := netip.MustParsePrefix("0.0.1.0/24")
 	network2 := netip.MustParsePrefix("0.0.1.0/25")
 	network3 := netip.MustParsePrefix("8000::/112")
 	network4 := netip.MustParsePrefix("8000::/113")
-	entry1 := NewBasicRangerEntry(network1)
-	entry2 := NewBasicRangerEntry(network2)
-	entry3 := NewBasicRangerEntry(network3)
-	entry4 := NewBasicRangerEntry(network4)
-	r.Insert(entry1)
-	r.Insert(entry2)
-	r.Insert(entry3)
-	r.Insert(entry4)
+	entry1 := newEmptyRangerEntry(network1)
+	entry2 := newEmptyRangerEntry(network2)
+	entry3 := newEmptyRangerEntry(network3)
+	entry4 := newEmptyRangerEntry(network4)
+	r.Insert(network1, emptyV)
+	r.Insert(network2, emptyV)
+	r.Insert(network3, emptyV)
+	r.Insert(network4, emptyV)
 	cases := []struct {
 		ip                 netip.Addr
-		containingNetworks []RangerEntry
+		containingNetworks []RangerEntry[empty]
 		err                error
 		name               string
 	}{
-		{netip.MustParseAddr("0.0.1.255"), []RangerEntry{entry1}, nil, "IPv4 should contain"},
-		{netip.MustParseAddr("0.0.1.127"), []RangerEntry{entry1, entry2}, nil, "IPv4 should contain both"},
-		{netip.MustParseAddr("0.0.0.127"), []RangerEntry{}, nil, "IPv4 should contain none"},
-		{netip.MustParseAddr("8000::ffff"), []RangerEntry{entry3}, nil, "IPv6 should constain"},
-		{netip.MustParseAddr("8000::7fff"), []RangerEntry{entry3, entry4}, nil, "IPv6 should contain both"},
-		{netip.MustParseAddr("8000::1:7fff"), []RangerEntry{}, nil, "IPv6 should contain none"},
+		{netip.MustParseAddr("0.0.1.255"), []RangerEntry[empty]{entry1}, nil, "IPv4 should contain"},
+		{netip.MustParseAddr("0.0.1.127"), []RangerEntry[empty]{entry1, entry2}, nil, "IPv4 should contain both"},
+		{netip.MustParseAddr("0.0.0.127"), nil, nil, "IPv4 should contain none"},
+		{netip.MustParseAddr("8000::ffff"), []RangerEntry[empty]{entry3}, nil, "IPv6 should constain"},
+		{netip.MustParseAddr("8000::7fff"), []RangerEntry[empty]{entry3, entry4}, nil, "IPv6 should contain both"},
+		{netip.MustParseAddr("8000::1:7fff"), nil, nil, "IPv6 should contain none"},
 	}
 
 	for _, tc := range cases {
@@ -130,10 +125,10 @@ func TestContainingNetworks(t *testing.T) {
 func TestCoveredNetworks(t *testing.T) {
 	for _, tc := range coveredNetworkTests {
 		t.Run(tc.name, func(t *testing.T) {
-			ranger := newBruteRanger()
+			ranger := newBruteRanger[empty]()
 			for _, insert := range tc.inserts {
 				network := netip.MustParsePrefix(insert)
-				err := ranger.Insert(NewBasicRangerEntry(network))
+				err := ranger.Insert(network, emptyV)
 				assert.NoError(t, err)
 			}
 
@@ -145,9 +140,8 @@ func TestCoveredNetworks(t *testing.T) {
 			assert.NoError(t, err)
 
 			var results []string
-			for _, result := range networks {
-				net := result.Network()
-				results = append(results, net.String())
+			for _, entry := range networks {
+				results = append(results, entry.Network.String())
 			}
 			sort.Strings(results)
 
@@ -159,10 +153,10 @@ func TestCoveredNetworks(t *testing.T) {
 func TestCoveringNetworks(t *testing.T) {
 	for _, tc := range coveringNetworkTests {
 		t.Run(tc.name, func(t *testing.T) {
-			ranger := newBruteRanger()
+			ranger := newBruteRanger[empty]()
 			for _, insert := range tc.inserts {
 				network := netip.MustParsePrefix(insert)
-				err := ranger.Insert(NewBasicRangerEntry(network))
+				err := ranger.Insert(network, emptyV)
 				assert.NoError(t, err)
 			}
 			var expectedEntries []string
@@ -174,8 +168,7 @@ func TestCoveringNetworks(t *testing.T) {
 
 			var results []string
 			for _, result := range networks {
-				net := result.Network()
-				results = append(results, net.String())
+				results = append(results, result.Network.String())
 			}
 			sort.Strings(results)
 

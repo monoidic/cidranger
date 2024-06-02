@@ -6,9 +6,8 @@ import (
 	"net/netip"
 	"os"
 	"testing"
-	"time"
 
-	rnet "github.com/monoidic/cidranger/net"
+	rnet "github.com/monoidic/cidranger/v2/net"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -57,12 +56,12 @@ func testContainsAgainstBase(t *testing.T, iterations int, ipGen ipGenerator) {
 	if testing.Short() {
 		t.Skip("Skipping memory test in `-short` mode")
 	}
-	rangers := []Ranger{NewPCTrieRanger()}
-	baseRanger := newBruteRanger()
+	rangers := []Ranger[empty]{NewPCTrieRanger[empty]()}
+	baseRanger := newBruteRanger[empty]()
 	for _, ranger := range rangers {
-		configureRangerWithAWSRanges(t, ranger)
+		configureRangerWithAWSRanges(ranger)
 	}
-	configureRangerWithAWSRanges(t, baseRanger)
+	configureRangerWithAWSRanges(baseRanger)
 
 	for i := 0; i < iterations; i++ {
 		nn := ipGen()
@@ -81,12 +80,12 @@ func testContainingNetworksAgainstBase(t *testing.T, iterations int, ipGen ipGen
 	if testing.Short() {
 		t.Skip("Skipping memory test in `-short` mode")
 	}
-	rangers := []Ranger{NewPCTrieRanger()}
-	baseRanger := newBruteRanger()
+	rangers := []Ranger[empty]{NewPCTrieRanger[empty]()}
+	baseRanger := newBruteRanger[empty]()
 	for _, ranger := range rangers {
-		configureRangerWithAWSRanges(t, ranger)
+		configureRangerWithAWSRanges(ranger)
 	}
-	configureRangerWithAWSRanges(t, baseRanger)
+	configureRangerWithAWSRanges(baseRanger)
 
 	for i := 0; i < iterations; i++ {
 		nn := ipGen()
@@ -107,12 +106,12 @@ func testCoversNetworksAgainstBase(t *testing.T, iterations int, netGen networkG
 	if testing.Short() {
 		t.Skip("Skipping memory test in `-short` mode")
 	}
-	rangers := []Ranger{NewPCTrieRanger()}
-	baseRanger := newBruteRanger()
+	rangers := []Ranger[empty]{NewPCTrieRanger[empty]()}
+	baseRanger := newBruteRanger[empty]()
 	for _, ranger := range rangers {
-		configureRangerWithAWSRanges(t, ranger)
+		configureRangerWithAWSRanges(ranger)
 	}
-	configureRangerWithAWSRanges(t, baseRanger)
+	configureRangerWithAWSRanges(baseRanger)
 
 	for i := 0; i < iterations; i++ {
 		network := netGen()
@@ -133,12 +132,12 @@ func testCoveringNetworksAgainstBase(t *testing.T, iterations int, netGen networ
 	if testing.Short() {
 		t.Skip("Skipping memory test in `-short` mode")
 	}
-	rangers := []Ranger{NewPCTrieRanger()}
-	baseRanger := newBruteRanger()
+	rangers := []Ranger[empty]{NewPCTrieRanger[empty]()}
+	baseRanger := newBruteRanger[empty]()
 	for _, ranger := range rangers {
-		configureRangerWithAWSRanges(t, ranger)
+		configureRangerWithAWSRanges(ranger)
 	}
-	configureRangerWithAWSRanges(t, baseRanger)
+	configureRangerWithAWSRanges(baseRanger)
 
 	for i := 0; i < iterations; i++ {
 		network := netGen()
@@ -162,59 +161,59 @@ func testCoveringNetworksAgainstBase(t *testing.T, iterations int, netGen networ
 */
 
 func BenchmarkPCTrieHitIPv4UsingAWSRanges(b *testing.B) {
-	benchmarkContainsUsingAWSRanges(b, netip.MustParseAddr("52.95.110.1"), NewPCTrieRanger())
+	benchmarkContainsUsingAWSRanges(b, netip.MustParseAddr("52.95.110.1"), NewPCTrieRanger[empty]())
 }
 func BenchmarkBruteRangerHitIPv4UsingAWSRanges(b *testing.B) {
-	benchmarkContainsUsingAWSRanges(b, netip.MustParseAddr("52.95.110.1"), newBruteRanger())
+	benchmarkContainsUsingAWSRanges(b, netip.MustParseAddr("52.95.110.1"), newBruteRanger[empty]())
 }
 
 func BenchmarkPCTrieHitIPv6UsingAWSRanges(b *testing.B) {
-	benchmarkContainsUsingAWSRanges(b, netip.MustParseAddr("2620:107:300f::36b7:ff81"), NewPCTrieRanger())
+	benchmarkContainsUsingAWSRanges(b, netip.MustParseAddr("2620:107:300f::36b7:ff81"), NewPCTrieRanger[empty]())
 }
 func BenchmarkBruteRangerHitIPv6UsingAWSRanges(b *testing.B) {
-	benchmarkContainsUsingAWSRanges(b, netip.MustParseAddr("2620:107:300f::36b7:ff81"), newBruteRanger())
+	benchmarkContainsUsingAWSRanges(b, netip.MustParseAddr("2620:107:300f::36b7:ff81"), newBruteRanger[empty]())
 }
 
 func BenchmarkPCTrieMissIPv4UsingAWSRanges(b *testing.B) {
-	benchmarkContainsUsingAWSRanges(b, netip.MustParseAddr("123.123.123.123"), NewPCTrieRanger())
+	benchmarkContainsUsingAWSRanges(b, netip.MustParseAddr("123.123.123.123"), NewPCTrieRanger[empty]())
 }
 func BenchmarkBruteRangerMissIPv4UsingAWSRanges(b *testing.B) {
-	benchmarkContainsUsingAWSRanges(b, netip.MustParseAddr("123.123.123.123"), newBruteRanger())
+	benchmarkContainsUsingAWSRanges(b, netip.MustParseAddr("123.123.123.123"), newBruteRanger[empty]())
 }
 
 func BenchmarkPCTrieHMissIPv6UsingAWSRanges(b *testing.B) {
-	benchmarkContainsUsingAWSRanges(b, netip.MustParseAddr("2620::ffff"), NewPCTrieRanger())
+	benchmarkContainsUsingAWSRanges(b, netip.MustParseAddr("2620::ffff"), NewPCTrieRanger[empty]())
 }
 func BenchmarkBruteRangerMissIPv6UsingAWSRanges(b *testing.B) {
-	benchmarkContainsUsingAWSRanges(b, netip.MustParseAddr("2620::ffff"), newBruteRanger())
+	benchmarkContainsUsingAWSRanges(b, netip.MustParseAddr("2620::ffff"), newBruteRanger[empty]())
 }
 
 func BenchmarkPCTrieHitContainingNetworksIPv4UsingAWSRanges(b *testing.B) {
-	benchmarkContainingNetworksUsingAWSRanges(b, netip.MustParseAddr("52.95.110.1"), NewPCTrieRanger())
+	benchmarkContainingNetworksUsingAWSRanges(b, netip.MustParseAddr("52.95.110.1"), NewPCTrieRanger[empty]())
 }
 func BenchmarkBruteRangerHitContainingNetworksIPv4UsingAWSRanges(b *testing.B) {
-	benchmarkContainingNetworksUsingAWSRanges(b, netip.MustParseAddr("52.95.110.1"), newBruteRanger())
+	benchmarkContainingNetworksUsingAWSRanges(b, netip.MustParseAddr("52.95.110.1"), newBruteRanger[empty]())
 }
 
 func BenchmarkPCTrieHitContainingNetworksIPv6UsingAWSRanges(b *testing.B) {
-	benchmarkContainingNetworksUsingAWSRanges(b, netip.MustParseAddr("2620:107:300f::36b7:ff81"), NewPCTrieRanger())
+	benchmarkContainingNetworksUsingAWSRanges(b, netip.MustParseAddr("2620:107:300f::36b7:ff81"), NewPCTrieRanger[empty]())
 }
 func BenchmarkBruteRangerHitContainingNetworksIPv6UsingAWSRanges(b *testing.B) {
-	benchmarkContainingNetworksUsingAWSRanges(b, netip.MustParseAddr("2620:107:300f::36b7:ff81"), newBruteRanger())
+	benchmarkContainingNetworksUsingAWSRanges(b, netip.MustParseAddr("2620:107:300f::36b7:ff81"), newBruteRanger[empty]())
 }
 
 func BenchmarkPCTrieMissContainingNetworksIPv4UsingAWSRanges(b *testing.B) {
-	benchmarkContainingNetworksUsingAWSRanges(b, netip.MustParseAddr("123.123.123.123"), NewPCTrieRanger())
+	benchmarkContainingNetworksUsingAWSRanges(b, netip.MustParseAddr("123.123.123.123"), NewPCTrieRanger[empty]())
 }
 func BenchmarkBruteRangerMissContainingNetworksIPv4UsingAWSRanges(b *testing.B) {
-	benchmarkContainingNetworksUsingAWSRanges(b, netip.MustParseAddr("123.123.123.123"), newBruteRanger())
+	benchmarkContainingNetworksUsingAWSRanges(b, netip.MustParseAddr("123.123.123.123"), newBruteRanger[empty]())
 }
 
 func BenchmarkPCTrieHMissContainingNetworksIPv6UsingAWSRanges(b *testing.B) {
-	benchmarkContainingNetworksUsingAWSRanges(b, netip.MustParseAddr("2620::ffff"), NewPCTrieRanger())
+	benchmarkContainingNetworksUsingAWSRanges(b, netip.MustParseAddr("2620::ffff"), NewPCTrieRanger[empty]())
 }
 func BenchmarkBruteRangerMissContainingNetworksIPv6UsingAWSRanges(b *testing.B) {
-	benchmarkContainingNetworksUsingAWSRanges(b, netip.MustParseAddr("2620::ffff"), newBruteRanger())
+	benchmarkContainingNetworksUsingAWSRanges(b, netip.MustParseAddr("2620::ffff"), newBruteRanger[empty]())
 }
 
 func BenchmarkNewPathprefixTriev4(b *testing.B) {
@@ -225,16 +224,16 @@ func BenchmarkNewPathprefixTriev6(b *testing.B) {
 	benchmarkNewPathprefixTrie(b, "8000::/24")
 }
 
-func benchmarkContainsUsingAWSRanges(tb testing.TB, nn netip.Addr, ranger Ranger) {
-	configureRangerWithAWSRanges(tb, ranger)
-	for n := 0; n < tb.(*testing.B).N; n++ {
+func benchmarkContainsUsingAWSRanges(b *testing.B, nn netip.Addr, ranger Ranger[empty]) {
+	configureRangerWithAWSRanges(ranger)
+	for n := 0; n < b.N; n++ {
 		ranger.Contains(nn)
 	}
 }
 
-func benchmarkContainingNetworksUsingAWSRanges(tb testing.TB, nn netip.Addr, ranger Ranger) {
-	configureRangerWithAWSRanges(tb, ranger)
-	for n := 0; n < tb.(*testing.B).N; n++ {
+func benchmarkContainingNetworksUsingAWSRanges(b *testing.B, nn netip.Addr, ranger Ranger[empty]) {
+	configureRangerWithAWSRanges(ranger)
+	for n := 0; n < b.N; n++ {
 		ranger.ContainingNetworks(nn)
 	}
 }
@@ -244,11 +243,10 @@ func benchmarkNewPathprefixTrie(b *testing.B, net1 string) {
 	ones := ipNet1.Bits()
 
 	n1 := rnet.NewNetwork(ipNet1)
-	uOnes := uint(ones)
 
 	b.ResetTimer()
 	for n := 0; n < b.N; n++ {
-		newPathprefixTrie(n1, uOnes)
+		newPathprefixTrie[empty](n1, ones)
 	}
 }
 
@@ -325,14 +323,14 @@ func loadAWSRanges() *AWSRanges {
 	return &ranges
 }
 
-func configureRangerWithAWSRanges(tb testing.TB, ranger Ranger) {
+func configureRangerWithAWSRanges(ranger Ranger[empty]) {
 	for _, prefix := range awsRanges.Prefixes {
 		network := netip.MustParsePrefix(prefix.IPPrefix)
-		ranger.Insert(NewBasicRangerEntry(network))
+		ranger.Insert(network, emptyV)
 	}
 	for _, prefix := range awsRanges.IPv6Prefixes {
 		network := netip.MustParsePrefix(prefix.IPPrefix)
-		ranger.Insert(NewBasicRangerEntry(network))
+		ranger.Insert(network, emptyV)
 	}
 }
 
@@ -346,5 +344,4 @@ func init() {
 		network := netip.MustParsePrefix(prefix.IPPrefix)
 		ipV4AWSRangesIPNets = append(ipV4AWSRangesIPNets, network)
 	}
-	rand.Seed(time.Now().Unix())
 }
