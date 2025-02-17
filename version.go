@@ -1,6 +1,7 @@
 package cidranger
 
 import (
+	"iter"
 	"net/netip"
 
 	rnet "github.com/monoidic/cidranger/v2/net"
@@ -53,6 +54,11 @@ func (v *versionedRanger[T]) ContainingNetworks(ip netip.Addr) ([]RangerEntry[T]
 	return ranger.ContainingNetworks(ip)
 }
 
+func (v *versionedRanger[T]) ContainingNetworksIter(ip netip.Addr) iter.Seq[RangerEntry[T]] {
+	ranger := check1(v.getRangerForIP(ip))
+	return ranger.ContainingNetworksIter(ip)
+}
+
 func (v *versionedRanger[T]) CoveredNetworks(network netip.Prefix) ([]RangerEntry[T], error) {
 	ranger, err := v.getRangerForIP(network.Addr())
 	if err != nil {
@@ -61,12 +67,22 @@ func (v *versionedRanger[T]) CoveredNetworks(network netip.Prefix) ([]RangerEntr
 	return ranger.CoveredNetworks(network)
 }
 
+func (v *versionedRanger[T]) CoveredNetworksIter(network netip.Prefix) iter.Seq[RangerEntry[T]] {
+	ranger := check1(v.getRangerForIP(network.Addr()))
+	return ranger.CoveredNetworksIter(network)
+}
+
 func (v *versionedRanger[T]) CoveringNetworks(network netip.Prefix) ([]RangerEntry[T], error) {
 	ranger, err := v.getRangerForIP(network.Addr())
 	if err != nil {
 		return nil, err
 	}
 	return ranger.CoveringNetworks(network)
+}
+
+func (v *versionedRanger[T]) CoveringNetworksIter(network netip.Prefix) iter.Seq[RangerEntry[T]] {
+	ranger := check1(v.getRangerForIP(network.Addr()))
+	return ranger.CoveringNetworksIter(network)
 }
 
 // Len returns number of networks in ranger.

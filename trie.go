@@ -3,6 +3,7 @@ package cidranger
 import (
 	"errors"
 	"fmt"
+	"iter"
 	"net/netip"
 	"strings"
 
@@ -115,6 +116,14 @@ func (p *prefixTrie[T]) ContainingNetworks(ip netip.Addr) ([]RangerEntry[T], err
 	return p.containingNetworks(nn)
 }
 
+func (p *prefixTrie[T]) ContainingNetworksIter(ip netip.Addr) iter.Seq[RangerEntry[T]] {
+	nn := rnet.NewNetworkNumber(ip)
+	if nn == nil {
+		check(ErrInvalidNetworkNumberInput)
+	}
+	return p.containingNetworksIter(nn)
+}
+
 // CoveredNetworks returns the list of RangerEntry(s) the given ipnet
 // covers.  That is, the networks that are completely subsumed by the
 // specified network.
@@ -123,11 +132,22 @@ func (p *prefixTrie[T]) CoveredNetworks(network netip.Prefix) ([]RangerEntry[T],
 	return p.coveredNetworks(net)
 }
 
+func (p *prefixTrie[T]) CoveredNetworksIter(network netip.Prefix) iter.Seq[RangerEntry[T]] {
+	net := rnet.NewNetwork(network)
+	return p.coveredNetworksIter(net)
+
+}
+
 // Covering returns the list of RangerEntry(s) the given ipnet
 // is covered by. It's like ContainingNetworks() for ipnet.
 func (p *prefixTrie[T]) CoveringNetworks(network netip.Prefix) ([]RangerEntry[T], error) {
 	net := rnet.NewNetwork(network)
 	return p.coveringNetworks(net)
+}
+
+func (p *prefixTrie[T]) CoveringNetworksIter(network netip.Prefix) iter.Seq[RangerEntry[T]] {
+	net := rnet.NewNetwork(network)
+	return p.coveringNetworksIter(net)
 }
 
 // Len returns number of networks in ranger.
@@ -250,6 +270,33 @@ func (p *prefixTrie[T]) containingNetworks(number rnet.NetworkNumber) ([]RangerE
 	return results, nil
 }
 
+func (p *prefixTrie[T]) containingNetworksIter(number rnet.NetworkNumber) iter.Seq[RangerEntry[T]] {
+	return func(yield func(RangerEntry[T]) bool) {
+		if !p.network.Contains(number) {
+			return
+		}
+		if p.hasEntry() {
+			if !yield(p.entry) {
+				return
+			}
+		}
+		if p.targetBitPosition() < 0 {
+			return
+		}
+		bit := check1(p.targetBitFromIP(number))
+		child := p.children[bit]
+		if child == nil {
+			return
+		}
+
+		for v := range child.containingNetworksIter(number) {
+			if !yield(v) {
+				return
+			}
+		}
+	}
+}
+
 func (p *prefixTrie[T]) coveredNetworks(network rnet.Network) ([]RangerEntry[T], error) {
 	var results []RangerEntry[T]
 	if network.Covers(p.network) {
@@ -267,6 +314,35 @@ func (p *prefixTrie[T]) coveredNetworks(network rnet.Network) ([]RangerEntry[T],
 		}
 	}
 	return results, nil
+}
+
+func (p *prefixTrie[T]) coveredNetworksIter(network rnet.Network) iter.Seq[RangerEntry[T]] {
+	return func(yield func(RangerEntry[T]) bool) {
+		if network.Covers(p.network) {
+			for entry := range p.walkDepth() {
+				if !yield(entry) {
+					return
+				}
+			}
+			return
+		}
+
+		if p.targetBitPosition() < 0 {
+			return
+		}
+
+		bit := check1(p.targetBitFromIP(network.Number))
+		child := p.children[bit]
+		if child == nil {
+			return
+		}
+
+		for v := range child.coveredNetworksIter(network) {
+			if !yield(v) {
+				return
+			}
+		}
+	}
 }
 
 func (p *prefixTrie[T]) coveringNetworks(network rnet.Network) ([]RangerEntry[T], error) {
@@ -299,6 +375,36 @@ func (p *prefixTrie[T]) coveringNetworks(network rnet.Network) ([]RangerEntry[T]
 		}
 	}
 	return results, nil
+}
+
+func (p *prefixTrie[T]) coveringNetworksIter(network rnet.Network) iter.Seq[RangerEntry[T]] {
+	return func(yield func(RangerEntry[T]) bool) {
+		if !p.network.Covers(network) {
+			return
+		}
+		if p.hasEntry() {
+			if !yield(p.entry) {
+				return
+			}
+		}
+
+		if p.targetBitPosition() < 0 {
+			return
+		}
+
+		bit := check1(p.targetBitFromIP(network.Number))
+		child := p.children[bit]
+
+		if child == nil {
+			return
+		}
+
+		for v := range child.coveringNetworksIter(network) {
+			if !yield(v) {
+				return
+			}
+		}
+	}
 }
 
 func (p *prefixTrie[T]) insert(network rnet.Network, entry RangerEntry[T]) (bool, error) {

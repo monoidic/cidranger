@@ -1,6 +1,8 @@
 package cidranger
 
 import (
+	"iter"
+	"log"
 	"net/netip"
 
 	rnet "github.com/monoidic/cidranger/v2/net"
@@ -86,6 +88,19 @@ func (b *bruteRanger[T]) ContainingNetworks(ip netip.Addr) ([]RangerEntry[T], er
 	return results, nil
 }
 
+func (b *bruteRanger[T]) ContainingNetworksIter(ip netip.Addr) iter.Seq[RangerEntry[T]] {
+	return func(yield func(RangerEntry[T]) bool) {
+		entries := check1(b.getEntriesByVersion(ip))
+		for net, entry := range entries {
+			if net.Contains(ip) {
+				if !yield(RangerEntry[T]{Network: net, Value: entry}) {
+					return
+				}
+			}
+		}
+	}
+}
+
 // CoveredNetworks returns the list of RangerEntry(s) covered by
 // the given ipnet.  That is, the networks that are completely subsumed by the
 // specified network.
@@ -103,6 +118,22 @@ func (b *bruteRanger[T]) CoveredNetworks(network netip.Prefix) ([]RangerEntry[T]
 		}
 	}
 	return results, nil
+}
+
+func (b *bruteRanger[T]) CoveredNetworksIter(network netip.Prefix) iter.Seq[RangerEntry[T]] {
+	return func(yield func(RangerEntry[T]) bool) {
+		entries := check1(b.getEntriesByVersion(network.Addr()))
+
+		testNetwork := rnet.NewNetwork(network)
+		for net, entry := range entries {
+			entryNetwork := rnet.NewNetwork(net)
+			if testNetwork.Covers(entryNetwork) {
+				if !yield(RangerEntry[T]{Network: net, Value: entry}) {
+					return
+				}
+			}
+		}
+	}
 }
 
 // Covering returns the list of RangerEntry(s) the given ipnet
@@ -123,6 +154,23 @@ func (b *bruteRanger[T]) CoveringNetworks(network netip.Prefix) ([]RangerEntry[T
 	return results, nil
 }
 
+// Covering returns the list of RangerEntry(s) the given ipnet
+// is covered. It's like ContainingNetworks() for ipnet.
+func (b *bruteRanger[T]) CoveringNetworksIter(network netip.Prefix) iter.Seq[RangerEntry[T]] {
+	return func(yield func(RangerEntry[T]) bool) {
+		entries := check1(b.getEntriesByVersion(network.Addr()))
+		testNetwork := rnet.NewNetwork(network)
+		for net, entry := range entries {
+			entryNetwork := rnet.NewNetwork(net)
+			if entryNetwork.Covers(testNetwork) {
+				if !yield(RangerEntry[T]{Network: net, Value: entry}) {
+					return
+				}
+			}
+		}
+	}
+}
+
 // Len returns number of networks in ranger.
 func (b *bruteRanger[T]) Len() int {
 	return len(b.ipV4Entries) + len(b.ipV6Entries)
@@ -141,4 +189,15 @@ func (b *bruteRanger[T]) getEntriesByVersion(ip netip.Addr) (map[netip.Prefix]T,
 // Just to complete interface
 func (p *bruteRanger[T]) Adjacent(network netip.Prefix) (entry RangerEntry[T], success bool, err error) {
 	return
+}
+
+func check(err error) {
+	if err != nil {
+		log.Panicf("err: %s", err)
+	}
+}
+
+func check1[T any](arg1 T, err error) T {
+	check(err)
+	return arg1
 }

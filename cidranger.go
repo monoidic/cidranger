@@ -33,6 +33,7 @@ package cidranger
 
 import (
 	"fmt"
+	"iter"
 	"net/netip"
 )
 
@@ -61,8 +62,11 @@ type Ranger[T any] interface {
 	Remove(network netip.Prefix) (T, bool, error)
 	Contains(ip netip.Addr) (bool, error)
 	ContainingNetworks(ip netip.Addr) ([]RangerEntry[T], error)
+	ContainingNetworksIter(ip netip.Addr) iter.Seq[RangerEntry[T]]
 	CoveredNetworks(network netip.Prefix) ([]RangerEntry[T], error)
+	CoveredNetworksIter(network netip.Prefix) iter.Seq[RangerEntry[T]]
 	CoveringNetworks(network netip.Prefix) ([]RangerEntry[T], error)
+	CoveringNetworksIter(network netip.Prefix) iter.Seq[RangerEntry[T]]
 	Adjacent(network netip.Prefix) (RangerEntry[T], bool, error)
 	Len() int
 }

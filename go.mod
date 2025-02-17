@@ -1,6 +1,6 @@
 module github.com/monoidic/cidranger/v2
 
-go 1.22.3
+go 1.23.6
 
 require (
 	github.com/sirupsen/logrus v1.9.0
